@@ -47,3 +47,4 @@ dkg-engine
 # RAGAS Reports
 apps/agent/tests/ragas/reports/
 tests/ragas/reports/
+package-lock.json
