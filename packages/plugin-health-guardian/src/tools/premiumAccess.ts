@@ -1,9 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DkgContext } from "@dkg/plugins";
 import { sql } from "drizzle-orm";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { PremiumAccessSchema } from "../types";
-import { PaymentService } from "../services/paymentService";
+import { IPaymentService } from "../types";
 import { premiumAccess, communityNotes } from "../database";
+import * as schema from "../database/schema";
 
 /**
  * Premium Access MCP Tool
@@ -11,8 +13,8 @@ import { premiumAccess, communityNotes } from "../database";
 export function registerPremiumAccessTool(
   mcp: McpServer,
   ctx: DkgContext,
-  paymentService: PaymentService,
-  db: any // TODO: Replace with proper database type
+  paymentService: IPaymentService,
+  db: BetterSQLite3Database<typeof schema>
 ) {
   mcp.registerTool(
     "access-premium-health-insights",
@@ -23,13 +25,12 @@ export function registerPremiumAccessTool(
     },
     async ({ noteId, paymentAmount }) => {
       try {
-        // In real implementation, get userId from auth context
         const userId = "demo_user"; // Mock user ID
 
         // Check if user already has premium access
         const existingAccess = await db.select()
           .from(premiumAccess)
-          .where(db.sql`${premiumAccess.noteId} = ${noteId} AND ${premiumAccess.userId} = ${userId} AND ${premiumAccess.expiresAt} > datetime('now')`);
+          .where(sql`${premiumAccess.noteId} = ${noteId} AND ${premiumAccess.userId} = ${userId} AND ${premiumAccess.expiresAt} > datetime('now')`);
 
         if (existingAccess.length > 0) {
           return {
