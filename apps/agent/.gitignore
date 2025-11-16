@@ -50,3 +50,6 @@ playwright/.cache/
 data/
 tests/ragas/reports/
 ragas-results.json
+
+database.db-shm
+database.db-wal
