@@ -12,7 +12,8 @@
     "lint": "eslint . --max-warnings 0",
     "test": "mocha --loader ../../node_modules/tsx/dist/loader.mjs 'tests/**/*.spec.ts'",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node migrate.js"
+    "db:migrate": "node migrate.js",
+    "cli:agent-flow": "node --import tsx src/cli/agentToAgentFlow.ts"
   },
   "dependencies": {
     "@dkg/plugin-swagger": "^0.0.2",

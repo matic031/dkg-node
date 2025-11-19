@@ -92,10 +92,10 @@ export const AnalyzeClaimSchema = z.object({
 
 export const PublishNoteSchema = z.object({
   claimId: z.string().describe("ID of the analyzed claim"),
-  summary: z.string().describe("AI-generated summary"),
-  confidence: z.number().min(0).max(1).describe("Confidence score 0-1"),
-  verdict: z.enum(["true", "false", "misleading", "uncertain"]).describe("Verification verdict"),
-  sources: z.array(z.string()).describe("Source references")
+  summary: z.string().describe("AI-generated summary of the analysis"),
+  confidence: z.number().min(0).max(1).describe("Confidence score between 0.0 and 1.0 (e.g., 0.7 for 70% confidence, NOT 70)"),
+  verdict: z.enum(["true", "false", "misleading", "uncertain"]).describe("Verification verdict - must be lowercase: 'true', 'false', 'misleading', or 'uncertain'"),
+  sources: z.array(z.string()).describe("Array of source references used in analysis")
 });
 
 export const GetNoteSchema = z.object({
@@ -114,7 +114,11 @@ export const StakeSchema = z.object({
 
 export const PremiumAccessSchema = z.object({
   noteId: z.string().describe("ID of the community note"),
-  paymentAmount: z.number().min(0.01).describe("Payment amount for premium access")
+  paymentAmount: z.number().min(0.01).describe("Payment amount for premium access"),
+  recipient: z
+    .string()
+    .optional()
+    .describe("Optional wallet address to receive the premium payment (defaults to the premium pool)")
 });
 
 // API response types
@@ -222,8 +226,18 @@ export interface ITokenomicsService {
 
 export interface IPaymentService {
   initialize(): Promise<void>;
-  processPremiumAccess(userId: string, noteId: string, amount: number): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date }>;
-  requestPremiumAccess(userId: string, noteId: string, amount: number): Promise<{ paymentUrl: string; paymentId: string; paymentHeaders: Record<string, string> }>; // Legacy compatibility
+  processPremiumAccess(
+    userId: string,
+    noteId: string,
+    amount: number,
+    recipientOverride?: string
+  ): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date; paidTo: string }>;
+  requestPremiumAccess(
+    userId: string,
+    noteId: string,
+    amount: number,
+    recipientOverride?: string
+  ): Promise<{ paymentUrl: string; paymentId: string; paymentHeaders: Record<string, string> }>; // Legacy compatibility
 }
 
 export interface IMetricsService {

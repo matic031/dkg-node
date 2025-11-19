@@ -41,8 +41,9 @@ export class PaymentService {
   async processPremiumAccess(
     userId: string,
     noteId: string,
-    amount: number
-  ): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date }> {
+    amount: number,
+    recipientOverride?: string
+  ): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date; paidTo: string }> {
     await this.initialize();
 
     const tokenConfig = getTokenConfig();
@@ -77,7 +78,9 @@ export class PaymentService {
       }
 
       // Generate premium access pool address (like staking pools)
-      const premiumPoolAddress = this.generatePremiumPoolAddress(noteId);
+      const premiumPoolAddress = recipientOverride && ethers.isAddress(recipientOverride)
+        ? recipientOverride
+        : this.generatePremiumPoolAddress(noteId);
 
       // Transfer TRAC tokens to premium pool
       const tx = await this.tokenService.transferTrac(premiumPoolAddress, requiredAmount);
@@ -91,6 +94,7 @@ export class PaymentService {
         noteId,
         amount: this.tokenService.formatTracAmount(requiredAmount),
         transactionHash: tx.hash,
+        paidTo: premiumPoolAddress,
         grantedAt,
         expiresAt
       });
@@ -98,7 +102,8 @@ export class PaymentService {
       return {
         transactionHash: tx.hash || '',
         grantedAt,
-        expiresAt
+        expiresAt,
+        paidTo: premiumPoolAddress
       };
     } catch (error) {
       console.error("❌ Premium access payment failed:", error);
@@ -113,10 +118,11 @@ export class PaymentService {
   async requestPremiumAccess(
     userId: string,
     noteId: string,
-    amount: number
+    amount: number,
+    recipientOverride?: string
   ): Promise<{ paymentUrl: string; paymentId: string; paymentHeaders: Record<string, string> }> {
     // Process payment immediately and return success info
-    const result = await this.processPremiumAccess(userId, noteId, amount);
+    const result = await this.processPremiumAccess(userId, noteId, amount, recipientOverride);
 
     // Return format compatible with existing x402 expectations
     return {
@@ -126,7 +132,8 @@ export class PaymentService {
         'X-Payment-Status': 'completed',
         'X-Transaction-Hash': result.transactionHash,
         'X-Granted-At': result.grantedAt.toISOString(),
-        'X-Expires-At': result.expiresAt.toISOString()
+        'X-Expires-At': result.expiresAt.toISOString(),
+        'X-Paid-To': result.paidTo
       }
     };
   }

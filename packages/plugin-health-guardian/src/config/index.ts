@@ -79,22 +79,22 @@ export function loadConfig(): HealthGuardianConfig {
   }
 
   // AI configuration
-  if (process.env.HG_AI_PROVIDER) {
+  if (process.env.LLM_PROVIDER) {
     config.ai = {
-      provider: process.env.HG_AI_PROVIDER as any,
+      provider: process.env.LLM_PROVIDER as any,
       temperature: config.ai?.temperature ?? DEFAULT_CONFIG.ai!.temperature,
       maxTokens: config.ai?.maxTokens ?? DEFAULT_CONFIG.ai!.maxTokens,
-      model: process.env.HG_AI_MODEL ?? config.ai?.model,
+      model: process.env.LLM_MODEL ?? config.ai?.model,
     };
   }
-  if (process.env.HG_AI_MODEL && config.ai) {
-    config.ai.model = process.env.HG_AI_MODEL;
+  if (process.env.LLM_MODEL && config.ai) {
+    config.ai.model = process.env.LLM_MODEL;
   }
-  if (process.env.HG_AI_TEMPERATURE && config.ai) {
-    config.ai.temperature = parseFloat(process.env.HG_AI_TEMPERATURE);
+  if (process.env.LLM_TEMPERATURE && config.ai) {
+    config.ai.temperature = parseFloat(process.env.LLM_TEMPERATURE);
   }
-  if (process.env.HG_AI_MAX_TOKENS && config.ai) {
-    config.ai.maxTokens = parseInt(process.env.HG_AI_MAX_TOKENS);
+  if (process.env.LLM_MAX_TOKENS && config.ai) {
+    config.ai.maxTokens = parseInt(process.env.LLM_MAX_TOKENS);
   }
 
   // DKG configuration
