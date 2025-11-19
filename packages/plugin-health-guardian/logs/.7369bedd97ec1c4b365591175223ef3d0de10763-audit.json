@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/logs/.7369bedd97ec1c4b365591175223ef3d0de10763-audit.json",
+    "files": [
+        {
+            "date": 1763386484820,
+            "name": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/logs/health-guardian-2025-11-17.log",
+            "hash": "4471689a42cf31614cd2c003d99fe0a1c271a9e50c02621262b042d10cae7241"
+        },
+        {
+            "date": 1763420824272,
+            "name": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/logs/health-guardian-2025-11-18.log",
+            "hash": "6552110d312c7ecb3c529e3290b431a9f672b274b34c37af976e6d27d13e90ba"
+        },
+        {
+            "date": 1763506965276,
+            "name": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/logs/health-guardian-2025-11-19.log",
+            "hash": "52994f3b2494d63d59f39e0280fa1562912069b3a0b795c189062d826a568a76"
+        }
+    ],
+    "hashType": "sha256"
+}

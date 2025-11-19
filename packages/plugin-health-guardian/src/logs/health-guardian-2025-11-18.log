@@ -1,0 +1,70 @@
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:28:20"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:28:20"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:28:20"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:28:20"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:34:37"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:34:37"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:34:37"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:34:37"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:42:02"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:42:02"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:42:33"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:42:33"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:47:39"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:47:39"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 17:47:39"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 17:47:39"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:10:10"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:10:10"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:10:10"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:10:10"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:16:29"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:16:29"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:16:29"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:16:29"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:19:17"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:19:17"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:19:18"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:19:18"}
+{"claimLength":49,"hasContext":true,"level":"info","message":"Analyzing health claim","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:19:18"}
+{"claim":"Ashwagandha supplements increase muscle strength....","error":"Health Guardian services not yet initialized. Service: aiService","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:19:18"}
+{"claimId":"claim_1763486358475","confidence":0.5,"level":"info","message":"Publishing health community note","service":"PublishNoteTool","timestamp":"2025-11-18 18:19:28","verdict":"uncertain"}
+{"contentPreview":"{\"@context\":\"https://schema.org/\",\"@type\":\"MedicalWebPage\",\"@id\":\"urn:health-note:claim_1763486358475\",\"name\":\"Health Claim Community Note\",\"description\":\"Automated publish from agent-to-agent flow (n...","level":"info","message":"Publishing Knowledge Asset to DKG","privacy":"public","service":"DkgService","timestamp":"2025-11-18 18:19:28"}
+{"error":{},"level":"error","message":"DKG publishing failed","service":"DkgService","timestamp":"2025-11-18 18:19:31"}
+{"claimId":"claim_1763486358475","error":"DKG publishing failed: Unable to publish: connect ECONNREFUSED 127.0.0.1:8900","level":"error","message":"Publishing note failed","service":"PublishNoteTool","timestamp":"2025-11-18 18:19:31"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:21:01"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:21:01"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:21:01"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:21:01"}
+{"claimLength":49,"hasContext":true,"level":"info","message":"Analyzing health claim","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:21:01"}
+{"claim":"Ashwagandha supplements increase muscle strength....","error":"Health Guardian services not yet initialized. Service: aiService","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:21:01"}
+{"claimId":"claim_1763486461947","confidence":0.5,"level":"info","message":"Publishing health community note","service":"PublishNoteTool","timestamp":"2025-11-18 18:21:11","verdict":"uncertain"}
+{"contentPreview":"{\"@context\":\"https://schema.org/\",\"@type\":\"MedicalWebPage\",\"@id\":\"urn:health-note:claim_1763486461947\",\"name\":\"Health Claim Community Note\",\"description\":\"Automated publish from agent-to-agent flow (n...","level":"info","message":"Publishing Knowledge Asset to DKG","privacy":"public","service":"DkgService","timestamp":"2025-11-18 18:21:11"}
+{"error":{},"level":"error","message":"DKG publishing failed","service":"DkgService","timestamp":"2025-11-18 18:21:13"}
+{"claimId":"claim_1763486461947","error":"DKG publishing failed: Unable to publish: connect ECONNREFUSED 127.0.0.1:8900","level":"error","message":"Publishing note failed","service":"PublishNoteTool","timestamp":"2025-11-18 18:21:13"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:23:44"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:23:44"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:23:44"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:23:44"}
+{"claimLength":49,"hasContext":true,"level":"info","message":"Analyzing health claim","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:23:44"}
+{"level":"info","message":"AI Analysis Service initialized with imported LLM","model":"gpt-4o-mini","provider":"ChatOpenAI","service":"AIAnalysisService","temperature":"Unknown","timestamp":"2025-11-18 18:23:57"}
+{"error":{},"level":"error","message":"Failed to parse LLM response","service":"AIAnalysisService","timestamp":"2025-11-18 18:23:57"}
+{"error":{},"level":"warn","message":"Real AI analysis failed, falling back to mock","service":"AIAnalysisService","timestamp":"2025-11-18 18:23:57"}
+{"claim":"Ashwagandha supplements increase muscle strength....","error":"table health_claims has no column named agent_id","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:23:57"}
+{"claimId":"claim_1763486637914","confidence":0.5,"level":"info","message":"Publishing health community note","service":"PublishNoteTool","timestamp":"2025-11-18 18:23:57","verdict":"uncertain"}
+{"contentPreview":"{\"@context\":\"https://schema.org/\",\"@type\":\"MedicalWebPage\",\"@id\":\"urn:health-note:claim_1763486637914\",\"name\":\"Health Claim Community Note\",\"description\":\"Automated publish from agent-to-agent flow (n...","level":"info","message":"Publishing Knowledge Asset to DKG","privacy":"public","service":"DkgService","timestamp":"2025-11-18 18:23:57"}
+{"error":{},"level":"error","message":"DKG publishing failed","service":"DkgService","timestamp":"2025-11-18 18:23:59"}
+{"claimId":"claim_1763486637914","error":"DKG publishing failed: Unable to publish: connect ECONNREFUSED 127.0.0.1:8900","level":"error","message":"Publishing note failed","service":"PublishNoteTool","timestamp":"2025-11-18 18:23:59"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:35:59"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:35:59"}
+{"level":"info","message":"AI Analysis Service registered for lazy LLM initialization","service":"AIAnalysisService","timestamp":"2025-11-18 18:35:59"}
+{"level":"info","message":"DKG Service initialized with real DKG client from context","service":"DkgService","timestamp":"2025-11-18 18:35:59"}
+{"claimLength":49,"hasContext":true,"level":"info","message":"Analyzing health claim","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:35:59"}
+{"level":"info","message":"AI Analysis Service initialized with imported LLM","model":"gpt-4o-mini","provider":"ChatOpenAI","service":"AIAnalysisService","temperature":"Unknown","timestamp":"2025-11-18 18:36:10"}
+{"error":{},"level":"error","message":"Failed to parse LLM response","service":"AIAnalysisService","timestamp":"2025-11-18 18:36:10"}
+{"error":{},"level":"warn","message":"Real AI analysis failed, falling back to mock","service":"AIAnalysisService","timestamp":"2025-11-18 18:36:10"}
+{"claim":"Ashwagandha supplements increase muscle strength....","error":"table health_claims has no column named agent_id","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-18 18:36:11"}
+{"claimId":"claim_1763487371164","confidence":0.5,"level":"info","message":"Publishing health community note","service":"PublishNoteTool","timestamp":"2025-11-18 18:36:11","verdict":"uncertain"}
+{"contentPreview":"{\"@context\":\"https://schema.org/\",\"@type\":\"MedicalWebPage\",\"@id\":\"urn:health-note:claim_1763487371164\",\"name\":\"Health Claim Community Note\",\"description\":\"Automated publish from agent-to-agent flow (n...","level":"info","message":"Publishing Knowledge Asset to DKG","privacy":"public","service":"DkgService","timestamp":"2025-11-18 18:36:11"}
+{"error":{},"level":"error","message":"DKG publishing failed","service":"DkgService","timestamp":"2025-11-18 18:36:13"}
+{"claimId":"claim_1763487371164","error":"DKG publishing failed: Unable to publish: connect ECONNREFUSED 127.0.0.1:8900","level":"error","message":"Publishing note failed","service":"PublishNoteTool","timestamp":"2025-11-18 18:36:13"}

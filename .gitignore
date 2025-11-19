@@ -47,3 +47,6 @@ dkg-engine
 # RAGAS Reports
 apps/agent/tests/ragas/reports/
 tests/ragas/reports/
+package-lock.json
+apps/agent/database.db-shm
+apps/agent/database.db-wal
