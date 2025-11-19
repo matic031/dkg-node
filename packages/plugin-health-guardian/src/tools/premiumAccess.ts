@@ -23,7 +23,7 @@ export function registerPremiumAccessTool(
       description: "Pay for premium access to detailed health analysis and expert insights",
       inputSchema: PremiumAccessSchema.shape
     },
-    async ({ noteId, paymentAmount }) => {
+    async ({ noteId, paymentAmount, recipient }) => {
       try {
         const userId = "demo_user"; // Mock user ID
 
@@ -40,7 +40,7 @@ export function registerPremiumAccessTool(
         }
 
         // Process TRAC payment immediately (like staking)
-        const paymentResult = await paymentService.processPremiumAccess(userId, noteId, paymentAmount);
+        const paymentResult = await paymentService.processPremiumAccess(userId, noteId, paymentAmount, recipient);
 
         // Record premium access in database
         await db.insert(premiumAccess).values({
@@ -59,11 +59,12 @@ export function registerPremiumAccessTool(
         return {
           content: [{
             type: "text",
-            text: `✅ Premium access granted for ${paymentAmount} TRAC!\n\n🔗 [View Transaction](${txUrl})\n\nYou now have access to:\n- Enhanced analysis methodology\n- Expert medical commentary\n- Related medical studies & citations from Europe PMC\n- Statistical confidence intervals\n- Source credibility assessment\n- Bias analysis & limitations\n\nAccess valid for 24 hours until: ${paymentResult.expiresAt.toISOString()}\n\nUse the same note retrieval command again to see the premium content!`
+            text: `✅ Premium access granted for ${paymentAmount} TRAC!\n\n🔗 Transaction Details:\n   Explorer: ${txUrl}\n   Transaction Hash: ${paymentResult.transactionHash}\n   Paid To: ${paymentResult.paidTo}\n\nYou now have access to:\n- Enhanced analysis methodology\n- Expert medical commentary\n- Related medical studies & citations from Europe PMC\n- Statistical confidence intervals\n- Source credibility assessment\n- Bias analysis & limitations\n\nAccess valid for 24 hours until: ${paymentResult.expiresAt.toISOString()}\n\nUse the same note retrieval command again to see the premium content!`
           }],
           transactionHash: paymentResult.transactionHash,
           grantedAt: paymentResult.grantedAt,
           expiresAt: paymentResult.expiresAt,
+          paidTo: paymentResult.paidTo,
           explorerLink: txUrl
         };
       } catch (error) {
