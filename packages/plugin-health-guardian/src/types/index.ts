@@ -113,14 +113,62 @@ export const StakeSchema = z.object({
 });
 
 export const PremiumAccessSchema = z.object({
-  noteId: z.string().describe("ID of the community note"),
-  paymentAmount: z.number().min(0.01).describe("Payment amount for premium access")
+  noteId: z.string().optional().describe("ID of the community note (optional - will use most recent if not provided)"),
+  paymentAmount: z.number().min(0.01).default(0.01).describe("Payment amount for premium access")
+});
+
+export const PremiumAnalysisSchema = z.object({
+  noteId: z.string().describe("ID of the community note to get premium analysis for")
+});
+
+export const CompletePaymentSchema = z.object({
+  paymentId: z.string().describe("Payment ID to complete"),
+  transactionHash: z.string().optional().describe("Blockchain transaction hash (optional for testing)")
+});
+
+export const AutonomousAnalysisSchema = z.object({
+  claim: z.string().min(10).max(1000).describe("Health claim to analyze autonomously"),
+  context: z.string().optional().describe("Additional context for the health claim analysis")
 });
 
 // API response types
 export interface ConsensusData {
   support: number;
   oppose: number;
+}
+
+// Workflow types
+export interface WorkflowProgress {
+  currentStep: string;
+  stepNumber: number;
+  totalSteps: number;
+  percentage: number;
+  message: string;
+  startTime: number;
+  elapsedTime: number;
+  estimatedTimeRemaining?: number;
+}
+
+export type ProgressCallback = (progress: WorkflowProgress) => void;
+
+export interface WorkflowResult {
+  success: boolean;
+  claimId: string;
+  noteId?: string;
+  ual?: string;
+  stakeId?: string;
+  rewardId?: string;
+  errors: string[];
+  executionTime: number;
+  progress?: WorkflowProgress;
+}
+
+// Agent types
+export interface AgentIdentity {
+  agentId: string;
+  name: string;
+  role?: string;
+  permissions?: string[];
 }
 
 // API Response types
@@ -222,8 +270,21 @@ export interface ITokenomicsService {
 
 export interface IPaymentService {
   initialize(): Promise<void>;
-  processPremiumAccess(userId: string, noteId: string, amount: number): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date }>;
+  processPremiumAccess(paymentId: string, payerAddress: string, transactionHash?: string): Promise<{ transactionHash: string; grantedAt: Date; expiresAt: Date }>;
   requestPremiumAccess(userId: string, noteId: string, amount: number): Promise<{ paymentUrl: string; paymentId: string; paymentHeaders: Record<string, string> }>; // Legacy compatibility
+}
+
+export interface ITokenomicsService {
+  initialize(): Promise<void>;
+  stakeTokens(request: StakeRequest): Promise<StakeResult>;
+  processPremiumPayment(noteId: string, amount: number): Promise<{
+    transactionHash: string;
+    blockNumber?: number;
+    premiumPoolAddress: string;
+  }>;
+  getCommunityConsensus(noteId: string): Promise<{ support: number; oppose: number }>;
+  checkTokenBalance(userId: string, token: "TRAC" | "NEURO", amount: number): Promise<boolean>;
+  calculateRewards(noteId: string, finalVerdict: string): Promise<any>;
 }
 
 export interface IMetricsService {
