@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/src/logs/.53c82897092b5d56889c40a1b46b1409e7480be4-audit.json",
+    "files": [
+        {
+            "date": 1763482882032,
+            "name": "/mnt/c/Users/Matic/Desktop/dkg-node/packages/plugin-health-guardian/src/logs/health-guardian-error-2025-11-18.log",
+            "hash": "60dbd1741ba542c6f936ce661354f218e1c7d1c3c2bcaa56a72318038d3b61c3"
+        }
+    ],
+    "hashType": "sha256"
+}

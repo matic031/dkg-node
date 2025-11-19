@@ -1,0 +1,7 @@
+{"claim":"Steroids cause muscle growth...","error":"no such table: health_claims","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-16 16:16:06"}
+{"claimId":"claim-steriod-muscle-growth-2025","error":"no such table: community_notes","level":"error","message":"Publishing note failed","service":"PublishNoteTool","timestamp":"2025-11-16 16:17:47"}
+{"claim":"insulin therapy is first-line for type 1 diabetes....","error":"no such table: health_claims","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-16 18:31:23"}
+{"claim":"insulin therapy is first-line for type 1 diabetes....","error":"no such table: health_claims","level":"error","message":"Health claim analysis failed","service":"AnalyzeClaimTool","timestamp":"2025-11-16 18:56:23"}
+{"error":{},"level":"error","message":"Failed to parse LLM response","service":"AIAnalysisService","timestamp":"2025-11-16 20:33:40"}
+{"error":{},"level":"error","message":"Failed to parse LLM response","service":"AIAnalysisService","timestamp":"2025-11-16 23:44:16"}
+{"error":{},"level":"error","message":"Failed to parse LLM response","service":"AIAnalysisService","timestamp":"2025-11-16 23:51:02"}
