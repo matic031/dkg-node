@@ -64,7 +64,6 @@ export class X402PaymentService {
     const tokenConfig = getTokenConfig();
     logger.info("✅ x402 Payment Service initialized", {
       network: this.blockchainProvider.getNetworkName(),
-      supportedCurrencies: ["USDC", "USDT", "DAI"]
     });
   }
 

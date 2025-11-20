@@ -95,7 +95,13 @@ export const PublishNoteSchema = z.object({
   summary: z.string().describe("AI-generated summary of the analysis"),
   confidence: z.number().min(0).max(1).describe("Confidence score between 0.0 and 1.0 (e.g., 0.7 for 70% confidence, NOT 70)"),
   verdict: z.enum(["true", "false", "misleading", "uncertain"]).describe("Verification verdict - must be lowercase: 'true', 'false', 'misleading', or 'uncertain'"),
-  sources: z.array(z.string()).describe("Array of source references used in analysis")
+  sources: z.array(z.string()).describe("Array of source references used in analysis"),
+  annotates: z.object({
+    id: z.string().describe("The @id (URI) of the Guardian Social Graph post being fact-checked"),
+    ual: z.string().optional().describe("The DKG UAL of the Knowledge Asset being annotated"),
+    headline: z.string().optional().describe("The headline/title of the annotated content"),
+    platform: z.string().optional().describe("The platform (e.g., 'news', 'tweet', 'reddit-post')")
+  }).optional().describe("Reference to the Guardian Social Graph asset being fact-checked - include when analyzing content fetched from DKG")
 });
 
 export const GetNoteSchema = z.object({
