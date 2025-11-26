@@ -55,3 +55,4 @@ apps/agent/database.db-wal
 *.db
 *.db-wal
 *.db-shm
+packages/plugin-medsy/.env.medsy
