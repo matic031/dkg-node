@@ -97,6 +97,10 @@ export function registerPublishNoteTool(
 
         const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+        // Find related knowledge assets before publishing (agent2agent feature)
+        const relatedUals = await dkgService.findRelatedUals(summary, 5);
+
+        // Build structured ClaimReview JSON-LD (agent2agent feature for Guardian Social Graph)
         const noteContent = buildCommunityNoteJsonLd({
           noteId,
           claimId,
@@ -110,10 +114,12 @@ export function registerPublishNoteTool(
         logger.info("JSON-LD Knowledge Asset structure", {
           context: Object.keys(noteContent["@context"]),
           graphEntities: noteContent["@graph"].length,
-          annotates: annotates?.id || "none"
+          annotates: annotates?.id || "none",
+          relatedAssets: relatedUals.length
         });
 
-        const result = await dkgService.publishKnowledgeAsset(noteContent, "public");
+        // Publish to DKG with both features: ClaimReview schema + related UALs
+        const result = await dkgService.publishKnowledgeAsset(noteContent, "public", relatedUals);
 
         await db.insert(communityNotes).values({
           noteId,
