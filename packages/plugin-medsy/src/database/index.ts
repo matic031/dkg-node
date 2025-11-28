@@ -7,7 +7,7 @@ import * as schema from "./schema";
 // Initialize SQLite database - prefer configured path, otherwise local medsy.db
 const dbPath =
   process.env.MEDSY_DATABASE_PATH ||
-  path.resolve(__dirname, "../../medsy.db");
+  path.resolve(__dirname, "../../../../apps/agent/medsy.db");
 
 console.log("Medsy DB Path:", dbPath);
 

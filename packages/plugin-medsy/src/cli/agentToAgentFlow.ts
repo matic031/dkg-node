@@ -1,18 +1,25 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import path from "path";
+import { fileURLToPath } from "url";
 
-config({ path: resolve(__dirname, "../../../../apps/agent/.env") });
-config({ path: resolve(__dirname, "../../.env.medsy") });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+config({ path: path.resolve(__dirname, "../../../../apps/agent/.env") });
+config({ path: path.resolve(__dirname, "../../.env.medsy") });
 console.log("Loaded MEDSY_DATABASE_PATH:", process.env.MEDSY_DATABASE_PATH);
 
 import chalk from "chalk";
 import boxen from "boxen";
+import { ethers } from "ethers";
 import { HealthClaimWorkflowService } from "../services/HealthClaimWorkflowService";
 import { AIAnalysisService } from "../services/aiAnalysis";
 import { X402PaymentService } from "../services/x402PaymentService";
 import { DkgService } from "../services/dkgService";
 import { AgentAuthService, type AgentIdentity } from "../services/agentAuthService";
 import { TokenomicsService } from "../services/tokenomicsService";
+import { BlockchainProvider } from "../services/blockchainProvider";
+import { TokenContractService } from "../services/tokenContractService";
 
 interface A2AMessage {
   messageId: string;
@@ -21,6 +28,56 @@ interface A2AMessage {
   timestamp: number;
   messageType: "request" | "response" | "proposal" | "acceptance" | "rejection";
   payload: any;
+}
+
+async function getWalletWithSufficientBalance(
+  primaryPrivateKey: string | undefined,
+  fallbackPrivateKey: string | undefined,
+  requiredAmount: number,
+  tokenType: "NEURO" | "TRAC"
+): Promise<{ privateKey: string; address: string; isFallback: boolean }> {
+  const rpcUrl = process.env.DKG_BLOCKCHAIN_RPC || "https://lofar-testnet.origin-trail.network";
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+  if (primaryPrivateKey) {
+    try {
+      const primaryWallet = new ethers.Wallet(primaryPrivateKey);
+      let balance: bigint;
+
+      if (tokenType === "NEURO") {
+        balance = await provider.getBalance(primaryWallet.address);
+      } else {
+        const tracAddress = process.env.MEDSY_TRAC_TOKEN_ADDRESS || "0xFfFFFFff00000000000000000000000000000001";
+        const tracAbi = ["function balanceOf(address) view returns (uint256)"];
+        const tracContract = new ethers.Contract(tracAddress, tracAbi, provider);
+        balance = await tracContract.balanceOf(primaryWallet.address);
+      }
+
+      const balanceInEther = parseFloat(ethers.formatEther(balance));
+
+      if (balanceInEther >= requiredAmount) {
+        log.info(`✓ Primary wallet has sufficient ${tokenType}: ${balanceInEther.toFixed(6)}`);
+        return { privateKey: primaryPrivateKey, address: primaryWallet.address, isFallback: false };
+      } else {
+        log.info(`⚠ Primary wallet has insufficient ${tokenType}: ${balanceInEther.toFixed(6)} (need ${requiredAmount})`);
+      }
+    } catch (error) {
+      log.info(`⚠ Could not check primary wallet: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Fallback to DKG_PUBLISH_WALLET
+  if (fallbackPrivateKey) {
+    try {
+      const fallbackWallet = new ethers.Wallet(fallbackPrivateKey);
+      log.info(`⟳ Falling back to DKG_PUBLISH_WALLET: ${fallbackWallet.address}`);
+      return { privateKey: fallbackPrivateKey, address: fallbackWallet.address, isFallback: true };
+    } catch (error) {
+      throw new Error(`Fallback wallet also unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  throw new Error(`No wallet available with sufficient ${tokenType} balance`);
 }
 
 const log = {
@@ -207,6 +264,7 @@ Respond with only the number (price in TRAC).`;
 
   async handleProposal(message: A2AMessage): Promise<A2AMessage> {
     const { offeredPrice, originalPrice } = message.payload;
+    log.agent("Analyzer Agent", `Received counter-offer of ${log.price(offeredPrice)} for original price of ${log.price(originalPrice)}`);
     
     if (this.llm) {
       const prompt = `You are selling an analysis for ${originalPrice.toFixed(4)} TRAC.
@@ -246,6 +304,7 @@ class BuyerAgent {
   private llm: any;
   private x402Service: X402PaymentService;
   private budget: number;
+  private recipientAddress: string = ""; // Analyzer agent's address
 
   constructor(identity: AgentIdentity, llm: any, x402Service: X402PaymentService, budget: number) {
     this.agentId = identity.agentId;
@@ -253,6 +312,10 @@ class BuyerAgent {
     this.llm = llm;
     this.x402Service = x402Service;
     this.budget = budget;
+  }
+
+  setRecipient(address: string) {
+    this.recipientAddress = address;
   }
 
   requestAnalysis(analyzerAgentId: string, claim: string, context?: string): A2AMessage {
@@ -263,55 +326,21 @@ class BuyerAgent {
     });
   }
 
-  async evaluatePrice(price: number): Promise<{ accept: boolean; counterOffer?: number; reasoning: string }> {
-    if (!this.llm) {
-      if (price <= this.budget) {
-        return { accept: true, reasoning: "Within budget" };
-      }
-      return {
-        accept: false,
-        counterOffer: Math.min(this.budget, price * 0.85),
-        reasoning: "Price too high, making counter-offer"
-      };
+  async evaluatePrice(price: number, confidence?: number): Promise<{ accept: boolean; counterOffer?: number; reasoning: string }> {
+    log.agent("Buyer Agent", `Evaluating price of ${log.price(price)} against budget of ${log.price(this.budget)} with confidence of ${confidence ? (confidence * 100).toFixed(1) + '%' : 'N/A'}`);
+
+    const maxWillingToPay = confidence ? Math.min(10, 1 + confidence * 9) : this.budget; // Scale willingness to pay with confidence, capped at 10 TRAC
+    log.info(`Buyer's maximum willingness to pay for this confidence level: ${log.price(maxWillingToPay)}`);
+
+    if (price <= maxWillingToPay) {
+      return { accept: true, reasoning: "Price is within acceptable range for this confidence level" };
     }
 
-    const prompt = `You are buying a health analysis for ${price.toFixed(4)} TRAC.
-Your budget is ${this.budget.toFixed(4)} TRAC.
-
-Decide:
-1. "accept" if price is within budget
-2. "negotiate" and propose counter-offer if price is above budget
-
-Respond with JSON:
-{
-  "decision": "accept" or "negotiate",
-  "counterOffer": number (only if negotiating),
-  "reasoning": "brief explanation"
-}`;
-
-    try {
-      const response = await this.llm.invoke([{ role: "user", content: prompt }]);
-      const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const decision = JSON.parse(jsonMatch[0]);
-        return {
-          accept: decision.decision === "accept",
-          counterOffer: decision.counterOffer,
-          reasoning: decision.reasoning
-        };
-      }
-    } catch (error) {
-      log.info("AI price evaluation failed, using fallback");
-    }
-
-    if (price <= this.budget) {
-      return { accept: true, reasoning: "Within budget" };
-    }
+    const counterOffer = Math.min(this.budget, maxWillingToPay, price * 0.85);
     return {
       accept: false,
-      counterOffer: Math.min(this.budget, price * 0.85),
-      reasoning: "Price too high"
+      counterOffer,
+      reasoning: `Price is too high for this confidence level. Proposing a counter-offer of ${log.price(counterOffer)}.`
     };
   }
 
@@ -325,7 +354,11 @@ Respond with JSON:
 
   async processPayment(price: number, claimId: string): Promise<string> {
     log.agent("Buyer Agent", `Processing x402 payment of ${log.price(price)}...`);
-    
+
+    if (!this.recipientAddress) {
+      throw new Error("Recipient address not set - cannot process payment");
+    }
+
     try {
       const payment = await this.x402Service.createPaymentRequest(
         price,
@@ -335,24 +368,44 @@ Respond with JSON:
 
       log.info(`Payment ID: ${payment.paymentId}`);
       log.info(`Currency: TRAC (OriginTrail)`);
-      
-      await sleep(800);
-      const completed = await this.x402Service.processPayment(
-        payment.paymentId,
-        this.identity.walletAddress,
-        `0x${Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join("")}`
+
+      // Check balance and get wallet
+      const wallet = await getWalletWithSufficientBalance(
+        process.env.BUYER_AGENT_PRIVATE_KEY,
+        process.env.DKG_PUBLISH_WALLET,
+        price * 1.2, // 20% buffer for gas
+        "TRAC"
       );
 
-      if (completed.transactionHash) {
-        log.success(`Payment confirmed: ${completed.transactionHash.substring(0, 20)}...`);
-        return completed.transactionHash;
+      if (wallet.isFallback) {
+        log.info(`💡 Using DKG_PUBLISH_WALLET as fallback for payment`);
       }
 
-      return "simulated_tx";
+      log.info(`Transferring ${price.toFixed(4)} TRAC to ${this.recipientAddress}...`);
+
+      const blockchainProvider = new BlockchainProvider();
+      await blockchainProvider.initialize(wallet.privateKey);
+      const tokenService = new TokenContractService(blockchainProvider);
+      await tokenService.initialize();
+
+      const amountInWei = ethers.parseUnits(price.toFixed(6), 18);
+
+      const tx = await tokenService.transferTrac(this.recipientAddress, amountInWei);
+
+      log.success(`TRAC transfer successful!`);
+      log.info(`Transaction hash: ${tx.hash}`);
+
+      const completed = await this.x402Service.processPayment(
+        payment.paymentId,
+        wallet.address,
+        tx.hash
+      );
+
+      log.success(`Payment verified and completed`);
+      return tx.hash;
     } catch (error) {
       log.error(`x402 payment failed: ${error instanceof Error ? error.message : String(error)}`);
-      log.info("Simulating payment...");
-      return `0x${Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+      throw error;
     }
   }
 }
@@ -453,6 +506,7 @@ async function runA2AFlow() {
     agentId: "analyzer_agent_001",
     name: "Health Analyzer Agent",
     walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    privateKey: process.env.BUYER_AGENT_PRIVATE_KEY,
     capabilities: ["health_analysis", "dkg_publishing", "staking"],
     registeredAt: new Date(),
     lastActive: new Date(),
@@ -462,7 +516,7 @@ async function runA2AFlow() {
   const buyerIdentity: AgentIdentity = {
     agentId: "buyer_agent_002",
     name: "Analysis Buyer Agent",
-    walletAddress: "0x853e46Dd7645D0543926B472Ec767ab344f55f4f",
+    walletAddress: process.env.BUYER_AGENT_PUBLIC_KEY || "5FA82F3pSXR76UvTi21w5qsm4naHyzaFH37z13vH1xjFZUsm",
     capabilities: ["payment", "negotiation"],
     registeredAt: new Date(),
     lastActive: new Date(),
@@ -476,37 +530,74 @@ async function runA2AFlow() {
     "Buyer ID": buyerIdentity.agentId
   }, "cyan");
 
+  log.info("Checking wallet balances...");
+  try {
+    const rpcUrl = process.env.DKG_BLOCKCHAIN_RPC || "https://lofar-testnet.origin-trail.network";
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const tracAddress = process.env.MEDSY_TRAC_TOKEN_ADDRESS || "0xFfFFFFff00000000000000000000000000000001";
+    const tracAbi = ["function balanceOf(address) view returns (uint256)"];
+    const tracContract = new ethers.Contract(tracAddress, tracAbi, provider);
+
+    const dkgPublishWallet = process.env.DKG_PUBLISH_WALLET ? new ethers.Wallet(process.env.DKG_PUBLISH_WALLET) : null;
+    const buyerWallet = process.env.BUYER_AGENT_PRIVATE_KEY ? new ethers.Wallet(process.env.BUYER_AGENT_PRIVATE_KEY) : null;
+
+    if (dkgPublishWallet) {
+      const neuro = await provider.getBalance(dkgPublishWallet.address);
+      const trac = await tracContract.balanceOf(dkgPublishWallet.address);
+      log.box("DKG_PUBLISH_WALLET Status", {
+        "Address": dkgPublishWallet.address,
+        "NEURO": `${ethers.formatEther(neuro)} ${parseFloat(ethers.formatEther(neuro)) < 0.01 ? "⚠️ LOW" : "✓"}`,
+        "TRAC": `${parseFloat(ethers.formatEther(trac)).toFixed(2)} ${parseFloat(ethers.formatEther(trac)) < 1 ? "⚠️ LOW" : "✓"}`,
+        "Role": "Fallback wallet for all operations"
+      }, "yellow");
+    }
+
+    if (buyerWallet && buyerWallet.address !== dkgPublishWallet?.address) {
+      const neuro = await provider.getBalance(buyerWallet.address);
+      const trac = await tracContract.balanceOf(buyerWallet.address);
+      const willFallback = parseFloat(ethers.formatEther(trac)) < 1;
+      log.box("BUYER_AGENT Wallet Status", {
+        "Address": buyerWallet.address,
+        "NEURO": ethers.formatEther(neuro),
+        "TRAC": parseFloat(ethers.formatEther(trac)).toFixed(2),
+        "Status": willFallback ? "⟳ Will use DKG_PUBLISH_WALLET" : "✓ Will use own wallet"
+      }, willFallback ? "yellow" : "green");
+    }
+  } catch (error) {
+    log.info(`Could not check wallet balances: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
   const analyzerAgent = new AnalyzerAgent(analyzerIdentity, llm, workflowService!);
   const buyerAgent = new BuyerAgent(buyerIdentity, llm, x402Service!, 3.0);
+  buyerAgent.setRecipient(analyzerIdentity.walletAddress); // Set payment recipient
 
   await sleep(500);
 
   log.subheader("Step 0: Query Guardian Social Graph");
   log.info("Fetching health claims from OriginTrail DKG...");
 
-  let guardianClaim: { claim: string; context: string; postUri?: string; url?: string; ual?: string } | null = null;
+  let guardianClaim: { claim: string; context: string; postUri?: string; url?: string } | null = null;
 
   try {
-    const guardianResult = await dkgService.findHealthClaimsToFactCheck(["autism", "vaccine", "health", "medical"]);
+    const guardianResult = await dkgService.findHealthClaimsToFactCheck();
 
     if (guardianResult.success && guardianResult.posts.length > 0) {
       const post = guardianResult.posts[0];
       guardianClaim = {
-        claim: post.headline || post.description,
+        claim: post.headline || post.description || "",
         context: `Guardian Social Graph - ${post.url}`,
         postUri: post.post,
-        url: post.url,
-        ual: post.ual
+        url: post.url
       };
 
       log.success(`Found ${guardianResult.posts.length} health claims in Guardian Social Graph`);
-      log.box("Guardian Social Graph Result", {
+      const boxContent: Record<string, any> = {
         "Posts Found": guardianResult.posts.length,
         "Selected Post": post.headline?.substring(0, 60) + "...",
         "Source URL": post.url || "N/A",
-        "Post URI": post.post?.substring(0, 50) + "..." || "N/A",
-        "UAL": post.ual ? chalk.blue(post.ual) : "N/A"
-      }, "cyan");
+        "Description": post.description?.substring(0, 80) + "..." || "N/A",
+      };
+      log.box("Guardian Social Graph Result", boxContent, "cyan");
     } else {
       log.info(`Guardian query returned: ${guardianResult.error || "no results"}`);
       log.info("Falling back to AI-generated claim...");
@@ -551,21 +642,25 @@ async function runA2AFlow() {
 
   log.subheader("Step 3: A2A Response - Analyzer Executes Workflow");
   const responseMsg = await analyzerAgent.handleRequest(requestMsg);
-  log.a2a(responseMsg.from, responseMsg.to, "RESPONSE", `Analysis complete. Price: ${log.price(responseMsg.payload.price)}`);
-  
+
+  const analysisData = responseMsg.payload.analysis;
+  const fullMessage = `Analysis complete: ${analysisData?.verdict || 'unknown'} verdict with ${analysisData?.confidence ? (analysisData.confidence * 100).toFixed(1) : '0'}% confidence. Price: ${responseMsg.payload.price.toFixed(4)} TRAC`;
+  log.a2a(responseMsg.from, responseMsg.to, "RESPONSE", fullMessage);
+
   log.box("Analysis Response", {
     "Claim ID": responseMsg.payload.claimId,
     "Note ID": responseMsg.payload.noteId,
     "UAL": responseMsg.payload.ual || "DKG publishing simulated",
-    "Verdict": responseMsg.payload.analysis?.verdict || "completed",
-    "Confidence": responseMsg.payload.analysis?.confidence ? `${(responseMsg.payload.analysis.confidence * 100).toFixed(1)}%` : "N/A",
+    "Verdict": analysisData?.verdict || "unknown",
+    "Confidence": analysisData?.confidence ? `${(analysisData.confidence * 100).toFixed(1)}%` : "0%",
+    "Summary": analysisData?.summary?.substring(0, 100) + "..." || "No summary",
     "Price": `${responseMsg.payload.price.toFixed(4)} TRAC`
   }, "blue");
 
   await sleep(500);
 
   log.subheader("Step 4: Price Negotiation");
-  const priceEval = await buyerAgent.evaluatePrice(responseMsg.payload.price);
+  const priceEval = await buyerAgent.evaluatePrice(responseMsg.payload.price, responseMsg.payload.analysis?.confidence);
   
   if (!priceEval.accept && priceEval.counterOffer) {
     log.a2a(buyerIdentity.agentId, analyzerIdentity.agentId, "PROPOSAL", 
@@ -606,10 +701,14 @@ async function runA2AFlow() {
   log.box("Payment Complete", {
     "Amount": `${responseMsg.payload.price.toFixed(4)} TRAC`,
     "Protocol": "x402 (HTTP 402 Payment Required)",
-    "Transaction": txHash.substring(0, 20) + "...",
+    "Transaction": txHash,
     "From": buyerIdentity.walletAddress,
-    "To": analyzerIdentity.walletAddress
+    "To": analyzerIdentity.walletAddress,
+    "Explorer": `https://neuroweb-testnet.subscan.io/tx/${txHash}`
   }, "green");
+
+  console.log(chalk.gray("\n  View transaction on explorer:"));
+  console.log(chalk.blue(`  https://neuroweb-testnet.subscan.io/tx/${txHash}\n`));
 
   const endTime = Date.now();
   const executionTime = ((endTime - startTime) / 1000).toFixed(2);
@@ -621,10 +720,11 @@ async function runA2AFlow() {
     "Total Time": `${executionTime}s`,
     "Claim Source": guardianClaim ? "Guardian Social Graph" : "AI Generated",
     "Claim": claim.substring(0, 50) + "...",
+    "Verdict": analysisData?.verdict || "unknown",
+    "Confidence": analysisData?.confidence ? `${(analysisData.confidence * 100).toFixed(1)}%` : "0%",
     "Final Price": `${responseMsg.payload.price.toFixed(4)} TRAC`,
     "Messages Exchanged": "3-5 A2A messages",
-    "Services Used": "Guardian DKG, AI, Tokenomics, x402",
-    "Agents": "✓ Real autonomous agents",
+    "Transaction Hash": txHash,
     "Published UAL": responseMsg.payload.ual || "simulated"
   }, "green");
 

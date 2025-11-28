@@ -9,70 +9,6 @@ import { createServiceLogger } from "../services/Logger";
 
 const logger = createServiceLogger("PublishNoteTool");
 
-function buildCommunityNoteJsonLd(params: {
-  noteId: string;
-  claimId: string;
-  summary: string;
-  confidence: number;
-  verdict: string;
-  sources: string[];
-  annotates?: {
-    id: string;
-    ual?: string;
-    headline?: string;
-    platform?: string;
-  };
-}) {
-  const { noteId, claimId, summary, confidence, verdict, sources, annotates } = params;
-  const timestamp = new Date().toISOString();
-  const noteUri = `urn:medsy:note:${noteId}`;
-
-  const yourAsset = {
-    "@type": "schema:ClaimReview",
-    "@id": noteUri,
-
-    "schema:name": `Health Fact-Check: ${verdict.toUpperCase()}`,
-    "schema:reviewBody": summary,
-    "schema:datePublished": timestamp,
-
-    "schema:reviewRating": {
-      "@type": "schema:Rating",
-      "schema:ratingValue": confidence,
-      "schema:ratingExplanation": `${verdict} (${(confidence * 100).toFixed(0)}% confidence)`
-    },
-
-    "schema:author": {
-      "@type": "schema:Organization",
-      "schema:name": "Medsy AI"
-    }
-  };
-
-  if (annotates) {
-    yourAsset["schema:itemReviewed"] = {
-      "@type": "schema:SocialMediaPosting",
-      "@id": annotates.id,
-      "schema:headline": annotates.headline || "Social media post",
-      "schema:genre": annotates.platform || "social"
-    };
-  }
-
-  if (sources && sources.length > 0) {
-    yourAsset["schema:citation"] = sources.map(url => ({
-      "@type": "schema:WebPage",
-      "schema:url": url
-    }));
-  }
-
-  if (annotates) {
-    yourAsset["prov:wasDerivedFrom"] = annotates.id;
-  }
-
-  return {
-    "@context": "https://schema.org/",
-    "@graph": [yourAsset]
-  };
-}
-
 export function registerPublishNoteTool(
   mcp: McpServer,
   ctx: DkgContext,
@@ -97,29 +33,37 @@ export function registerPublishNoteTool(
 
         const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Find related knowledge assets before publishing (agent2agent feature)
+        const claimRecord = await db.select()
+          .from(healthClaims)
+          .where(eq(healthClaims.claimId, claimId))
+          .limit(1);
+
+        const claim = claimRecord?.[0]?.claim || "Health claim";
+
         const relatedUals = await dkgService.findRelatedUals(summary, 5);
 
-        // Build structured ClaimReview JSON-LD (agent2agent feature for Guardian Social Graph)
-        const noteContent = buildCommunityNoteJsonLd({
+        const noteData = {
+          claimId,
+          noteId,
+          claim,
+          agentId: "medsy-mcp-tool",
+          agentName: "Medsy AI",
+          verdict,
+          confidence,
+          summary,
+          sources,
+          publishedAt: new Date().toISOString()
+        };
+
+        logger.info("Publishing Knowledge Asset", {
           noteId,
           claimId,
-          summary,
-          confidence,
           verdict,
-          sources,
-          annotates
-        });
-
-        logger.info("JSON-LD Knowledge Asset structure", {
-          context: Object.keys(noteContent["@context"]),
-          graphEntities: noteContent["@graph"].length,
           annotates: annotates?.id || "none",
           relatedAssets: relatedUals.length
         });
 
-        // Publish to DKG with both features: ClaimReview schema + related UALs
-        const result = await dkgService.publishKnowledgeAsset(noteContent, "public", relatedUals);
+        const result = await dkgService.publishKnowledgeAsset(noteData, "public", relatedUals);
 
         await db.insert(communityNotes).values({
           noteId,
@@ -172,8 +116,7 @@ export function registerPublishNoteTool(
             text: responseText
           }],
           noteId,
-          ual: result.UAL,
-          jsonLd: noteContent
+          ual: result.UAL
         };
       } catch (error: any) {
         logger.error("Publishing note failed", { error: error.message, claimId });

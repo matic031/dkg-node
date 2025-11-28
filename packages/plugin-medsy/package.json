@@ -6,8 +6,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "tsup src/*.ts --format cjs,esm --dts --watch",
-    "build": "tsup src/*.ts --format cjs,esm --dts",
+    "dev": "tsup --watch",
+    "build": "tsup",
     "check-types": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "mocha --loader ../../node_modules/tsx/dist/loader.mjs 'tests/**/*.spec.ts'",
