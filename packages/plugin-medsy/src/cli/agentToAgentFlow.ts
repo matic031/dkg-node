@@ -66,7 +66,6 @@ async function getWalletWithSufficientBalance(
     }
   }
 
-  // Fallback to DKG_PUBLISH_WALLET
   if (fallbackPrivateKey) {
     try {
       const fallbackWallet = new ethers.Wallet(fallbackPrivateKey);
@@ -304,7 +303,7 @@ class BuyerAgent {
   private llm: any;
   private x402Service: X402PaymentService;
   private budget: number;
-  private recipientAddress: string = ""; // Analyzer agent's address
+  private recipientAddress: string = "";
 
   constructor(identity: AgentIdentity, llm: any, x402Service: X402PaymentService, budget: number) {
     this.agentId = identity.agentId;
@@ -329,7 +328,7 @@ class BuyerAgent {
   async evaluatePrice(price: number, confidence?: number): Promise<{ accept: boolean; counterOffer?: number; reasoning: string }> {
     log.agent("Buyer Agent", `Evaluating price of ${log.price(price)} against budget of ${log.price(this.budget)} with confidence of ${confidence ? (confidence * 100).toFixed(1) + '%' : 'N/A'}`);
 
-    const maxWillingToPay = confidence ? Math.min(10, 1 + confidence * 9) : this.budget; // Scale willingness to pay with confidence, capped at 10 TRAC
+    const maxWillingToPay = confidence ? Math.min(10, 1 + confidence * 9) : this.budget;
     log.info(`Buyer's maximum willingness to pay for this confidence level: ${log.price(maxWillingToPay)}`);
 
     if (price <= maxWillingToPay) {
@@ -369,11 +368,10 @@ class BuyerAgent {
       log.info(`Payment ID: ${payment.paymentId}`);
       log.info(`Currency: TRAC (OriginTrail)`);
 
-      // Check balance and get wallet
       const wallet = await getWalletWithSufficientBalance(
         process.env.BUYER_AGENT_PRIVATE_KEY,
         process.env.DKG_PUBLISH_WALLET,
-        price * 1.2, // 20% buffer for gas
+        price * 1.2,
         "TRAC"
       );
 
@@ -626,7 +624,7 @@ async function runA2AFlow() {
   }
 
   log.box("Health Claim to Analyze", {
-    "Claim": claim.length > 80 ? claim.substring(0, 80) + "..." : claim,
+    "Claim": claim.length > 90 ? claim.substring(0, 90) + "..." : claim,
     "Context": context,
     "Source": guardianClaim ? "Guardian Social Graph (DKG)" : "AI Generated"
   }, "magenta");
@@ -635,7 +633,7 @@ async function runA2AFlow() {
 
   log.subheader("Step 2: A2A Request - Buyer → Analyzer");
   const requestMsg = buyerAgent.requestAnalysis(analyzerIdentity.agentId, claim, context);
-  log.a2a(requestMsg.from, requestMsg.to, "REQUEST", `Analyze: "${claim.substring(0, 50)}..."`);
+  log.a2a(requestMsg.from, requestMsg.to, "REQUEST", `Analyze: "${claim.substring(0, 90)}..."`);
   log.info(`Message ID: ${requestMsg.messageId}`);
 
   await sleep(500);
@@ -698,12 +696,43 @@ async function runA2AFlow() {
     responseMsg.payload.claimId
   );
 
+  let actualTxFrom = buyerIdentity.walletAddress;
+  let actualTxTo = analyzerIdentity.walletAddress;
+  let actualRecipient = analyzerIdentity.walletAddress;
+
+  try {
+    const blockchainProvider = new BlockchainProvider();
+    if (!blockchainProvider.getProvider()) {
+      await blockchainProvider.initialize();
+    }
+    const provider = blockchainProvider.getProvider();
+
+    const transaction = await provider.getTransaction(txHash);
+    if (transaction) {
+      actualTxFrom = transaction.from;
+      actualTxTo = transaction.to || actualTxTo;
+
+      if (transaction.data && transaction.data.startsWith('0xa9059cbb')) {
+        const recipientAddressBytes = transaction.data.substring(10, 10 + 64);
+        if (recipientAddressBytes) {
+          const paddedAddress = '0x' + recipientAddressBytes;
+          const addressBN = BigInt(paddedAddress);
+          actualRecipient = ethers.AddressZero !== `0x${recipientAddressBytes.slice(-40)}` ?
+            '0x' + recipientAddressBytes.slice(-40) : actualRecipient;
+        }
+      }
+    }
+  } catch (error) {
+    log.info(`Could not fetch actual transaction details: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
   log.box("Payment Complete", {
     "Amount": `${responseMsg.payload.price.toFixed(4)} TRAC`,
     "Protocol": "x402 (HTTP 402 Payment Required)",
     "Transaction": txHash,
-    "From": buyerIdentity.walletAddress,
-    "To": analyzerIdentity.walletAddress,
+    "From": actualTxFrom,
+    "To (Contract)": actualTxTo,
+    "Recipient": actualRecipient,
     "Explorer": `https://neuroweb-testnet.subscan.io/tx/${txHash}`
   }, "green");
 
@@ -719,12 +748,15 @@ async function runA2AFlow() {
     "Protocol": "Agent-to-Agent (A2A)",
     "Total Time": `${executionTime}s`,
     "Claim Source": guardianClaim ? "Guardian Social Graph" : "AI Generated",
-    "Claim": claim.substring(0, 50) + "...",
+    "Claim": claim,
     "Verdict": analysisData?.verdict || "unknown",
     "Confidence": analysisData?.confidence ? `${(analysisData.confidence * 100).toFixed(1)}%` : "0%",
     "Final Price": `${responseMsg.payload.price.toFixed(4)} TRAC`,
     "Messages Exchanged": "3-5 A2A messages",
     "Transaction Hash": txHash,
+    "From Address": actualTxFrom,
+    "To Address": actualTxTo,
+    "Recipient": actualRecipient,
     "Published UAL": responseMsg.payload.ual || "simulated"
   }, "green");
 

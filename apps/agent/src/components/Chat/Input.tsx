@@ -32,7 +32,6 @@ import { FileDefinition } from "@/shared/files";
 import ChatInputFilesSelected from "./Input/FilesSelected";
 import ChatInputToolsSelector from "./Input/ToolsSelector";
 import ChatInputAttachmentChip from "./Input/AttachmentChip";
-import { useMcpClient } from "@/client";
 
 export default function ChatInput({
   onSendMessage,
@@ -78,7 +77,6 @@ export default function ChatInput({
   const [selectedFiles, setSelectedFiles] = useState<FileDefinition[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<any>(null);
-  const mcp = useMcpClient();
 
   // Animation states
   const focusValue = useSharedValue(0);
@@ -195,143 +193,6 @@ export default function ChatInput({
     setSelectedFiles([]);
   }, [message, selectedFiles, onSendMessage, onAttachFiles]);
 
-  // Build topic-specific SPARQL queries for the Guardian Social Graph
-  const buildVaccineQuery = () => `PREFIX schema: <https://schema.org/>
-
-SELECT ?post ?headline ?url
-WHERE {
-  ?post a schema:SocialMediaPosting ;
-        schema:headline ?headline ;
-        schema:url ?url .
-
-  FILTER(
-    CONTAINS(LCASE(?headline), "vaccine") ||
-    CONTAINS(LCASE(?headline), "vaccination") ||
-    CONTAINS(LCASE(?headline), "immunization")
-  )
-}
-LIMIT 30`;
-
-  const buildNaturalRemedyQuery = () => `PREFIX schema: <https://schema.org/>
-
-SELECT ?post ?headline ?url
-WHERE {
-  ?post a schema:SocialMediaPosting ;
-        schema:headline ?headline ;
-        schema:url ?url .
-
-  FILTER(
-    CONTAINS(LCASE(?headline), "natural remedy") ||
-    CONTAINS(LCASE(?headline), "herbal") ||
-    CONTAINS(LCASE(?headline), "holistic") ||
-    CONTAINS(LCASE(?headline), "alternative medicine") ||
-    CONTAINS(LCASE(?headline), "natural cure") ||
-    CONTAINS(LCASE(?headline), "home remedy")
-  )
-}
-LIMIT 30`;
-
-  const buildScientificPaperQuery = () => `PREFIX schema: <https://schema.org/>
-
-SELECT ?post ?headline ?url
-WHERE {
-  ?post a schema:SocialMediaPosting ;
-        schema:headline ?headline ;
-        schema:url ?url .
-
-  FILTER(
-    CONTAINS(LCASE(?headline), "research") ||
-    CONTAINS(LCASE(?headline), "study") ||
-    CONTAINS(LCASE(?headline), "scientific") ||
-    CONTAINS(LCASE(?headline), "paper") ||
-    CONTAINS(LCASE(?headline), "journal")
-  )
-}
-LIMIT 30`;
-
-  const runQuickQuery = useCallback(
-    async (topicLabel: string, queryBuilder: () => string, fallbackText: string) => {
-      // If MCP is not available, fall back to plain text prompt
-      if (!mcp?.token) {
-        onSendMessage({
-          role: "user",
-          content: [{ type: "text", text: fallbackText }],
-        });
-        return;
-      }
-
-      try {
-        // Call the DKG query tool with the topic-specific SPARQL query
-        const sparqlQuery = queryBuilder();
-
-        const toolResult = await mcp.callTool(
-          {
-            name: "query-knowledge-graph",
-            arguments: { query: sparqlQuery },
-          },
-          undefined,
-          { timeout: 120000, maxTotalTimeout: 120000 },
-        );
-
-        // Parse SPARQL results from the Guardian Social Graph
-        let rows: any[] = [];
-        const rawText = Array.isArray(toolResult.content)
-          ? toolResult.content.find((c: any) => c?.type === "text")?.text
-          : (toolResult as any)?.content || (toolResult as any)?.text;
-
-        if (typeof rawText === "string") {
-          try {
-            const parsed = JSON.parse(rawText);
-            const dataRows = parsed?.data?.data;
-            if (Array.isArray(dataRows)) rows = dataRows;
-          } catch (err) {
-            console.debug("Failed to parse tool result:", err);
-          }
-        }
-
-        const DKG_EXPLORER_BASE = "https://dkg-testnet.origintrail.io/explore?ual=";
-        const limited = rows.slice(0, 10);
-        const formatted =
-          limited.length === 0
-            ? `No ${topicLabel} posts found in the Guardian Social Graph. Try a different topic or check back later.`
-            : limited
-                .map((r, i) => {
-                  const headline = r.headline || r.title || "Untitled";
-                  const contentUrl = r.url || "N/A";
-                  const ual = r.post || r["@id"] || r.id || r.ual;
-
-                  // Simple format: Number. "Headline" — URL — UAL (for blockchain verification)
-                  let result = `${i + 1}. "${headline}"\n   🔗 ${contentUrl}`;
-
-                  if (ual) {
-                    const explorerUrl = `${DKG_EXPLORER_BASE}${encodeURIComponent(ual)}`;
-                    result += `\n   🔍 Verify: ${explorerUrl}`;
-                  }
-
-                  return result;
-                })
-                .join("\n\n");
-
-        onSendMessage({
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: `**Latest ${topicLabel} from the Guardian Social Graph** (queried via DKG blockchain)\n\n${formatted}\n\n💡 *Each result includes a UAL (Universal Asset Locator) that you can verify on the OriginTrail DKG blockchain explorer.*\n\nAsk me to analyze a specific post by number, or request more details about any claim.`,
-            },
-          ],
-        });
-      } catch (error) {
-        console.error("Quick query failed:", error);
-        onSendMessage({
-          role: "user",
-          content: [{ type: "text", text: fallbackText }],
-        });
-      }
-    },
-    [mcp, onSendMessage],
-  );
-
   return (
     <View style={[{ width: "100%", position: "relative" }, style]}>
       {!!selectedFiles.length && (
@@ -406,52 +267,6 @@ LIMIT 30`;
           />
         </View>
       </Animated.View>
-
-      {/* Custom Query Buttons */}
-      <View style={styles.quickQueryButtons}>
-        <Button
-          color="secondary"
-          flat
-          text="🦠 Vaccine Posts"
-          style={styles.quickQueryButton}
-          disabled={disabled}
-          onPress={async () => {
-            runQuickQuery(
-              "vaccine posts",
-              buildVaccineQuery,
-              "Find social media posts about vaccines from the Guardian Social Graph on DKG",
-            );
-          }}
-        />
-        <Button
-          color="secondary"
-          flat
-          text="🌿 Natural Remedies"
-          style={styles.quickQueryButton}
-          disabled={disabled}
-          onPress={async () => {
-            runQuickQuery(
-              "natural remedy posts",
-              buildNaturalRemedyQuery,
-              "Find social media posts about natural remedies from the Guardian Social Graph on DKG",
-            );
-          }}
-        />
-        <Button
-          color="secondary"
-          flat
-          text="📄 Scientific Papers"
-          style={styles.quickQueryButton}
-          disabled={disabled}
-          onPress={async () => {
-            runQuickQuery(
-              "scientific research posts",
-              buildScientificPaperQuery,
-              "Find posts about scientific research and studies from the Guardian Social Graph on DKG",
-            );
-          }}
-        />
-      </View>
 
       {/* Tools section */}
       <View style={styles.inputTools}>
@@ -529,22 +344,6 @@ const styles = StyleSheet.create({
   inputButton: {
     height: "100%",
     aspectRatio: 1,
-  },
-  quickQueryButtons: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingHorizontal: 8,
-    flexWrap: "wrap",
-  },
-  quickQueryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    height: 36,
   },
   inputTools: {
     position: "relative",
